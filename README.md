@@ -10,6 +10,12 @@ SegNet architecture ([Badrinarayanan et al. 2015](https://arxiv.org/abs/1511.005
 
 ![](./img/SegNet_architecture.png)
 
+### DeepVel
+
+[DeepVel](https://github.com/aasensio/deepvel) architecture ([Asensio Ramos, Requerey & Vitas 2017](https://www.aanda.org/articles/aa/abs/2017/08/aa30783-17/aa30783-17.html)) for regression.
+
+<img src="./img/DeepVel_architecture.png" width="300"/>
+
 ## Data
 
 ### Segmentation

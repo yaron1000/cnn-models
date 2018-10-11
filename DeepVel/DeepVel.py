@@ -1,5 +1,5 @@
 from keras.models import Model, model_from_json
-from keras.layers import Input
+from keras.layers import Input, Add
 from keras.layers.core import Layer, Activation, Reshape
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Conv2D, MaxPooling2D, UpSampling2D, ZeroPadding2D
@@ -11,11 +11,11 @@ import time
 import argparse
 
         
-class segnet(object):
+class deepvel(object):
     
     def __init__(self, sample, output):
         """
-        Class used to predict using SegNet
+        Class used to predict using DeepVel
         Parameters
         ----------
         sample : array
@@ -32,72 +32,47 @@ class segnet(object):
         self.pad = (1, 1)
         self.pool_size = (2, 2)
         self.batch_size = 32
+        self.n_residual_layers = 5
         
         self.n_frames, seld.nx, self.ny, self.nBands = self.sample.shape
 
         print("Image size: {0}x{1}".format(self.nx, self.ny))
         print("Number of images: {0}".format(self.n_frames))
         
+    def residual(self, inputs):
+        x = Conv2D(self.filter_size, self.kernel, padding='same', kernel_initializer='he_normal')(inputs)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Conv(self.filter_size, self.kernel, padding='same', kernel_initializer='he_normal')(x)
+        x = BatchNormalization()(x)
+        x = Add()([x, inputs])
+
+        return x
+    
     def define_network(self):
         print("Setting up network...")
-    
+
         inputs = Input(shape=(self.nx, self.ny, self.nBands))
-        
-        # encoder
-        x = ZeroPadding2D(padding= self.pad)(inputs)
-        x = Conv2D(self.filter_size, self.kernel, padding='valid')(x)
+
+        conv = Conv2D(self.filter_size, self.kernel, activation='relu', padding='same', kernel_initializer='he_normal')(inputs)
+
+        x = self.residual(conv)
+        for i in range(self.n_residual_layers):
+            x = self.residual(x)
+
+        x = Conv2D(self.filter_size, self.kernel, padding='same', kernel_initializer='he_normal')(x)
         x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding= self.pad)(x)
-        x = Conv2D(128, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding= self.pad)(x)
-        x = Conv2D(256, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding= self.pad)(x)
-        x = Conv2D(512, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        
-        
-        # decoder
-        x = ZeroPadding2D(padding = self.pad)(x)
-        x = Conv2D(512, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = UpSampling2D(size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding= self.pad)(x)
-        x = Conv2D(256, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = UpSampling2D(size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding = self.pad)(x)
-        x = Conv2D(128, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = UpSampling2D(size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding = self.pad)(x)
-        x = Conv2D(self.filter_size, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        
-        x = Conv2D(self.nClasses, (1, 1), padding='valid')(x)
-        
-        outputs = Activation('softmax')(x)
+        x = Add()([x, conv])
+
+        outputs = Conv2D(self.nOutputs, (1, 1), activation='linear', padding='same', kernel_initializer='he_normal')(x)
+
+        self.model = Model(inputs=inputs, outputs=outputs)
         
         self.model = Model(inputs=inputs, outputs=outputs)
         self.model.load_weights('Network/SegNet_weights.hdf5')
-        
 
     def predict(self):
-        print("Segmenting images with SegNet...")        
+        print("Predicting with DeepVel...")        
         
         start = time.time()
         out = self.model.predict(self.sample)
@@ -115,7 +90,7 @@ class segnet(object):
 
 if (__name__ == '__main__'):
 
-    parser = argparse.ArgumentParser(description='SegNet prediction')
+    parser = argparse.ArgumentParser(description='DeepVel prediction')
     parser.add_argument('-i','--in', help='Input file')
     parser.add_argument('-o','--out', help='Output file')
     parsed = vars(parser.parse_args())
@@ -125,7 +100,7 @@ if (__name__ == '__main__'):
     imgs = f.get("x_validation")
     f.close()  
     
-    prediction = segnet(imgs, parsed['out'])
+    prediction = deepvel(imgs, parsed['out'])
     prediction.define_network()
     out = prediction.predict()
 

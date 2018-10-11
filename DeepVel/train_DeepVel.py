@@ -1,5 +1,5 @@
 from keras.models import Model, model_from_json
-from keras.layers import Input
+from keras.layers import Input, Add
 from keras.layers.core import Layer, Activation, Reshape
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Conv2D, MaxPooling2D, UpSampling2D, ZeroPadding2D
@@ -23,11 +23,11 @@ class LossHistory(Callback):
     def finalize(self):
         pass
         
-class train_segnet(object):
+class train_deepvel(object):
     
     def __init__(self, root_in, root_out, option):
         """
-        Class used to train SegNet
+        Class used to train DeepVel
         Parameters
         ----------
         root_in : string
@@ -47,6 +47,7 @@ class train_segnet(object):
         self.pad = (1, 1)
         self.pool_size = (2, 2)
         self.batch_size = 32
+        self.n_residual_layers = 5
         
         self.input_x_train = self.root_in + "x_train.h5"
         self.input_y_train = self.root_in + "y_train.h5"
@@ -59,7 +60,7 @@ class train_segnet(object):
         f.close()
 
         f = h5py.File(self.input_y_train, 'r')
-        self.n_validation_orig, _, _, self.nClasses = f.get("y_train").shape        
+        self.n_validation_orig, _, _, self.nOutputs = f.get("y_train").shape        
         f.close()
         
         self.batchs_per_epoch_train = int(self.n_train_orig / self.batch_size)
@@ -79,7 +80,7 @@ class train_segnet(object):
         print("   - Batches per epoch: {0}".format(self.batchs_per_epoch_validation))
         
         print("Number of Bands: {0}".format(self.nBands))
-        print("Number of Classes: {0}".format(self.nClasses))
+        
     def read_data(self):
         print("Reading data...")
             
@@ -107,61 +108,33 @@ class train_segnet(object):
         f_x.close()
         f_y.close()
 
+    def residual(self, inputs):
+        x = Conv2D(self.filter_size, self.kernel, padding='same', kernel_initializer='he_normal')(inputs)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Conv(self.filter_size, self.kernel, padding='same', kernel_initializer='he_normal')(x)
+        x = BatchNormalization()(x)
+        x = Add()([x, inputs])
+
+        return x
     
     def define_network(self):
         print("Setting up network...")
-    
+
         inputs = Input(shape=(self.nx, self.ny, self.nBands))
-        
-        # encoder
-        x = ZeroPadding2D(padding= self.pad)(inputs)
-        x = Conv2D(self.filter_size, self.kernel, padding='valid')(x)
+
+        conv = Conv2D(self.filter_size, self.kernel, activation='relu', padding='same', kernel_initializer='he_normal')(inputs)
+
+        x = self.residual(conv)
+        for i in range(self.n_residual_layers):
+            x = self.residual(x)
+
+        x = Conv2D(self.filter_size, self.kernel, padding='same', kernel_initializer='he_normal')(x)
         x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding= self.pad)(x)
-        x = Conv2D(128, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding= self.pad)(x)
-        x = Conv2D(256, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding= self.pad)(x)
-        x = Conv2D(512, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        
-        
-        # decoder
-        x = ZeroPadding2D(padding = self.pad)(x)
-        x = Conv2D(512, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = UpSampling2D(size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding= self.pad)(x)
-        x = Conv2D(256, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = UpSampling2D(size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding = self.pad)(x)
-        x = Conv2D(128, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        x = UpSampling2D(size=self.pool_size)(x)
-        
-        x = ZeroPadding2D(padding = self.pad)(x)
-        x = Conv2D(self.filter_size, self.kernel, padding='valid')(x)
-        x = BatchNormalization()(x)
-        
-        x = Conv2D(self.nClasses, (1, 1), padding='valid')(x)
-        
-        outputs = Activation('softmax')(x)
-        
+        x = Add()([x, conv])
+
+        outputs = Conv2D(self.nOutputs, (1, 1), activation='linear', padding='same', kernel_initializer='he_normal')(x)
+
         self.model = Model(inputs=inputs, outputs=outputs)
         
         # Save model
@@ -220,7 +193,7 @@ if (__name__ == '__main__'):
     nEpochs = int(parsed['epochs'])
     option = parsed['action']
 
-    out = train_segnet(root_in, root_out, option)
+    out = train_deepvel(root_in, root_out, option)
     
     out.read_data()
 
