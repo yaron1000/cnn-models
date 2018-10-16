@@ -58,8 +58,8 @@ class train_segnet(object):
         self.n_train_orig, self.nx, self.ny, self.nBands = f.get("x_train").shape        
         f.close()
 
-        f = h5py.File(self.input_y_train, 'r')
-        self.n_validation_orig, _, _, self.nClasses = f.get("y_train").shape        
+        f = h5py.File(self.input_y_validation, 'r')
+        self.n_validation_orig, _, _, self.nClasses = f.get("y_validation").shape        
         f.close()
         
         self.batchs_per_epoch_train = int(self.n_train_orig / self.batch_size)

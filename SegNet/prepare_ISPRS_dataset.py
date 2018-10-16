@@ -6,6 +6,7 @@ import rasterio
 import glob
 import h5py
 import os
+import argparse
 
     
 def load_tif_3bands(path, files):
@@ -67,87 +68,92 @@ def from_rgb_to_categorical(array):
     image = np_utils.to_categorical(image, num_classes=6)
     return image
 
-    def subfield(cube, xr, yr):
-        #Subfield selection
-        cube_sub = cube[:,yr[0]:yr[1],xr[0]:xr[1],:]
-        return cube_sub
+def subfield(cube, xr, yr):
+    #Subfield selection
+    cube_sub = cube[:,yr[0]:yr[1],xr[0]:xr[1],:]
+    return cube_sub
     
-    def write_data(output_path, name, cube):
-        #Write output parameters
-        h5f = h5py.File(output_path, 'w')
-        h5f.create_dataset(name, data=cube)  
-        h5f.close()
-        
-# Load data
-directory_x = "/Users/ikersanchez/Vizzuality/PROIEKTUAK/Skydipper/Data/Potsdam/2_Ortho_RGB/"
-directory_y = "/Users/ikersanchez/Vizzuality/PROIEKTUAK/Skydipper/Data/Potsdam/5_Labels_all/"
-files_x_train = sorted(os.listdir(directory_x))[:8]
-files_y_train = sorted(os.listdir(directory_y))[:8]
-files_x_validation = sorted(os.listdir(directory_x))[8:10]
-files_y_validation = sorted(os.listdir(directory_y))[8:10]
-# Train data
-x_train = load_tif_3bands(directory_x, files_x_train)
-y_train = load_tif_3bands(directory_y, files_y_train)
-# Validation data
-x_validation = load_tif_3bands(directory_x, files_x_validation)
-y_validation = load_tif_3bands(directory_y, files_y_validation)
+def write_data(output_path, name, cube):
+    #Write output parameters
+    h5f = h5py.File(output_path, 'w')
+    h5f.create_dataset(name, data=cube)  
+    h5f.close()
 
-# Visualize data
-fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10,5))
-ax = axs[0]
-ax.imshow(x_train[0,:,:,:])
+def resize_patches(x_train, y_train, x_validation, y_validation, patch_size = 200):
+    stt, sty, stx, stz = x_train.shape
+    svt, svy, svx, svz = y_validation.shape
+    
+    num_pathces_per_frame = sty/patch_size*stx/patch_size
+    xt = np.zeros((int(stt*num_pathces_per_frame),patch_size,patch_size,int(stz)), dtype=np.float32)
+    yt = np.zeros((int(stt*num_pathces_per_frame),patch_size,patch_size,int(svz)), dtype=np.float32)
+    xv = np.zeros((int(svt*num_pathces_per_frame),patch_size,patch_size,int(stz)), dtype=np.float32)
+    yv = np.zeros((int(svt*num_pathces_per_frame),patch_size,patch_size,int(svz)), dtype=np.float32)
 
-ax = axs[1]
-ax.imshow(y_train[0,:,:,:])
+    n=0
+    for i in np.arange(sty/patch_size):
+        for j in np.arange(stx/patch_size):
+            xr=[int(patch_size*i),int(patch_size+patch_size*i)]
+            yr=[int(patch_size*j),int(patch_size+patch_size*j)]
 
-plt.show()
+            xt[(stt*n):(stt+stt*n),:,:,:] = subfield(x_train,xr,yr)
+            yt[(stt*n):(stt+stt*n),:,:,:] = subfield(y_train,xr,yr)
+            xv[(svt*n):(svt+svt*n),:,:,:] = subfield(x_validation,xr,yr)
+            yv[(svt*n):(svt+svt*n),:,:,:] = subfield(y_validation,xr,yr)
+            n=n+1
+    return xt, yt, xv, yv
 
-# Preprocess class labels for Keras
-y_train = from_rgb_to_categorical(y_train)
-y_validation = from_rgb_to_categorical(y_validation)
+if (__name__ == '__main__'):
+    # Load data
+    directory_x = "/Users/ikersanchez/Vizzuality/PROIEKTUAK/Skydipper/Data/Potsdam/2_Ortho_RGB/"
+    directory_y = "/Users/ikersanchez/Vizzuality/PROIEKTUAK/Skydipper/Data/Potsdam/5_Labels_all/"
+    files_x_train = sorted(os.listdir(directory_x))[:8]
+    files_y_train = sorted(os.listdir(directory_y))[:8]
+    files_x_validation = sorted(os.listdir(directory_x))[8:10]
+    files_y_validation = sorted(os.listdir(directory_y))[8:10]
+    # Train data
+    x_train = load_tif_3bands(directory_x, files_x_train)
+    y_train = load_tif_3bands(directory_y, files_y_train)
+    # Validation data
+    x_validation = load_tif_3bands(directory_x, files_x_validation)
+    y_validation = load_tif_3bands(directory_y, files_y_validation)
+
+    # Visualize data
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10,5))
+    ax = axs[0]
+    ax.imshow(x_train[0,:,:,:])
+
+    ax = axs[1]
+    ax.imshow(y_train[0,:,:,:])
+
+    plt.show()
+
+    # Preprocess class labels for Keras
+    y_train = from_rgb_to_categorical(y_train)
+    y_validation = from_rgb_to_categorical(y_validation)
 
 
-# We extract patches of 200×200 pixels
-patch_size = 200
-stt, sty, stx, stz = x_train.shape
-svt, svy, svx, svz = y_validation.shape
+    # We extract patches of 200×200 pixels
+    patch_size = 200
+    xt, yt, xv, yv = resize_patches(x_train, y_train, x_validation, y_validation, patch_size = 200)
 
-num_pathces_per_frame = sty/patch_size*stx/patch_size
-xt = np.zeros((int(stt*num_pathces_per_frame),patch_size,patch_size,int(stz)), dtype=np.float32)
-yt = np.zeros((int(stt*num_pathces_per_frame),patch_size,patch_size,int(svz)), dtype=np.float32)
-xv = np.zeros((int(svt*num_pathces_per_frame),patch_size,patch_size,int(stz)), dtype=np.float32)
-yv = np.zeros((int(svt*num_pathces_per_frame),patch_size,patch_size,int(svz)), dtype=np.float32)
+    # We randomize the datasets
+    stt=xt.shape[0]
+    svt=xv.shape[0]
+    arr_t = np.arange(stt)
+    arr_v = np.arange(svt)
+    np.random.shuffle(arr_t)
+    np.random.shuffle(arr_v)
 
-n=0
-for i in np.arange(sty/patch_size):
-    for j in np.arange(stx/patch_size):
-        xr=[int(patch_size*i),int(patch_size+patch_size*i)]
-        yr=[int(patch_size*j),int(patch_size+patch_size*j)]
+    x_train = xt[arr_t,:,:,:]
+    y_train = yt[arr_t,:,:,:]
+    x_validation = xv[arr_v,:,:,:]
+    y_validation = yv[arr_v,:,:,:]
 
-        xt[(stt*n):(stt+stt*n),:,:,:] = subfield(x_train,xr,yr)
-        yt[(stt*n):(stt+stt*n),:,:,:] = subfield(y_train,xr,yr)
-        xv[(svt*n):(svt+svt*n),:,:,:] = subfield(x_validation,xr,yr)
-        yv[(svt*n):(svt+svt*n),:,:,:] = subfield(y_validation,xr,yr)
-        n=n+1
+    # Save samples
+    write_data("/Users/ikersanchez/Vizzuality/PROIEKTUAK/Skydipper/Work/cnn-models/SegNet/Samples/Potsdam/x_train.h5", 'x_train', x_train)
 
-# We randomize the data sets
-stt=xt.shape[0]
-svt=xv.shape[0]
-arr_t = np.arange(stt)
-arr_v = np.arange(svt)
-np.random.shuffle(arr_t)
-np.random.shuffle(arr_v)
+    write_data("/Users/ikersanchez/Vizzuality/PROIEKTUAK/Skydipper/Work/cnn-models/SegNet/Samples/Potsdam/y_train.h5", 'y_train', y_train)
 
-x_train = xt[arr_t,:,:,:]
-y_train = yt[arr_t,:,:,:]
-x_validation = xv[arr_v,:,:,:]
-y_validation = yv[arr_v,:,:,:]
+    write_data("/Users/ikersanchez/Vizzuality/PROIEKTUAK/Skydipper/Work/cnn-models/SegNet/Samples/Potsdam/x_validation.h5", 'x_validation', x_validation)
 
-# Save samples
-write_data("./Samples/Potsdam/x_train.h5", 'x_train', x_train)
-
-write_data("./Samples/Potsdam/y_train.h5", 'y_train', y_train)
-
-write_data("./Samples/Potsdam/x_validation.h5", 'x_validation', x_validation)
-
-write_data("./Samples/Potsdam/y_validation.h5", 'y_validation', y_validation)
+    write_data("/Users/ikersanchez/Vizzuality/PROIEKTUAK/Skydipper/Work/cnn-models/SegNet/Samples/Potsdam/y_validation.h5", 'y_validation', y_validation)

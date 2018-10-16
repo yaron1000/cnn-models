@@ -13,7 +13,7 @@ import argparse
         
 class segnet(object):
     
-    def __init__(self, sample, output):
+    def __init__(self, sample, output, nClasses):
         """
         Class used to predict using SegNet
         Parameters
@@ -22,10 +22,13 @@ class segnet(object):
             Array of size (n_times, nx, ny, nBands) with the n_times consecutive images of size nx x ny x nBands
         output : string
             Filename were the output is saved
+        input : int
+            Number of classes
         """
         
         self.sample = sample
         self.output = output
+        self.nClasses = nClasses
         
         self.filter_size = 64
         self.kernel = (3, 3)        
@@ -33,7 +36,7 @@ class segnet(object):
         self.pool_size = (2, 2)
         self.batch_size = 32
         
-        self.n_frames, seld.nx, self.ny, self.nBands = self.sample.shape
+        self.n_frames, self.nx, self.ny, self.nBands = self.sample.shape
 
         print("Image size: {0}x{1}".format(self.nx, self.ny))
         print("Number of images: {0}".format(self.n_frames))
@@ -93,7 +96,7 @@ class segnet(object):
         outputs = Activation('softmax')(x)
         
         self.model = Model(inputs=inputs, outputs=outputs)
-        self.model.load_weights('Network/SegNet_weights.hdf5')
+        self.model.load_weights('SegNet/Network/SegNet_weights.hdf5')
         
 
     def predict(self):
@@ -118,15 +121,20 @@ if (__name__ == '__main__'):
     parser = argparse.ArgumentParser(description='SegNet prediction')
     parser.add_argument('-i','--in', help='Input file')
     parser.add_argument('-o','--out', help='Output file')
+    parser.add_argument('-c','--nclasses', help='Number of classes')
     parsed = vars(parser.parse_args())
 
-    # Open file with observations and read them. We use h5 in our case
-    f = h5py.File(parsed['in'], 'r')
-    imgs = f.get("x_validation")
-    f.close()  
+    root_in = str(parsed['in'])
+    root_out = str(parsed['out'])
+    nClasses = int(parsed['nclasses'])
     
-    prediction = segnet(imgs, parsed['out'])
+    # Open file with observations and read them. We use h5 in our case
+    f = h5py.File(root_in, 'r')
+    imgs = f.get("x_validation")  
+    
+    prediction = segnet(imgs, root_out, nClasses)
     prediction.define_network()
     out = prediction.predict()
+    f.close()
 
 
