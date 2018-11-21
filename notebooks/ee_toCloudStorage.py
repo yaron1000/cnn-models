@@ -9,45 +9,11 @@ import numpy as np
 import math
 import ee_collection_specifics
 import ee
+    
 
+class ee_image:
     
-def download_image_tif(image, download_zip, scale, region = None):
-    
-    Vizparam = {'scale': scale, 'crs': 'EPSG:4326'}
-    if region:
-        Vizparam['region'] = region
-    
-   
-    url = image.getDownloadUrl(Vizparam)     
-
-    data = urlopen(url)
-    with open(download_zip, 'wb') as fp:
-        while True:
-            chunk = data.read(16 * 1024)
-            if not chunk: break
-            fp.write(chunk)
-            
-    # extract the zip file transformation data
-    z = zipfile.ZipFile(download_zip, 'r')
-    target_folder_name = download_zip.split('.zip')[0]
-    z.extractall(target_folder_name)
- 
-        
-def load_tif_bands(path, files):
-    data = np.array([]) 
-    for n, file in enumerate(files):
-        image_path = path+file
-        image = rasterio.open(image_path)
-        data = np.append(data, image.read(1))
-    data = data.reshape((n+1, image.read(1).shape[0], image.read(1).shape[1]))
-    data = np.moveaxis(data, 0, 2)
-    
-    return data
-
-
-class ee_datasets:
-    
-    def __init__(self, point, buffer, startDate, stopDate, scale, collection):
+    def __init__(self, point, buffer, startDate, stopDate, scale, file_name, collection):
         """
         Class used to get the datasets from Earth Engine
         Parameters
@@ -60,6 +26,8 @@ class ee_datasets:
         stopDate : string
         scale: number
             Pixel size in meters.
+        file_name: string
+            File name prefix.
         collection: string
             Name of each collection.
 
@@ -70,6 +38,7 @@ class ee_datasets:
         self.startDate = startDate
         self.stopDate = stopDate       
         self.scale = scale 
+        self.file_name = file_name 
         self.collection = collection
         
         # Area of Interest
@@ -85,7 +54,13 @@ class ee_datasets:
         # normalized Difference bands
         self.normDiff_bands = ee_collection_specifics.normDiff_bands(self.collection)
         
-    def read_datasets(self):
+        # Google Cloud Bucket
+        self.bucket = 'skydipper_materials'
+        
+        # Folder path in the bucket
+        self.path = 'gee_data/'
+        
+    def export_toCloudStorage(self):
         
         ## Composite
         image = ee_collection_specifics.Composite(self.collection)(self.image_collection, self.startDate, self.stopDate, self.geom)
@@ -102,31 +77,16 @@ class ee_datasets:
         else:
             image = image.select(self.bands)
         
-        # Choose the scale
+        ## Choose the scale
         image =  image.reproject(crs='EPSG:4326', scale=self.scale)
+        
+        ## Export image to Google Cloud Storage
+        ee.batch.Export.image.toCloudStorage(
+            image = image,
+            bucket= self.bucket,
+            fileNamePrefix = self.path+self.file_name,
+            scale = self.scale,
+            crs = 'EPSG:4326',
+            region = self.region,
+            fileFormat= 'GeoTIFF').start()
             
-        # Download images as tif
-        download_image_tif(image, 'data.zip', scale = self.scale, region = self.region)
-        
-        # Load data
-        directory = "./data/"
-
-        files = sorted(f for f in os.listdir(directory) if f.endswith('.' + 'tif'))
-        
-        data = load_tif_bands(directory, files)
-        
-        # Remove data folders and files
-        file="data.zip"
-        ## If file exists, delete it ##
-        if os.path.isfile(file):
-            os.remove(file)
-        else:    ## Show an error ##
-            print("Error: %s file not found" % file)
-        ## Try to remove tree; if failed show an error using try...except on screen
-        folder = "./data"
-        try:
-            shutil.rmtree(folder)
-        except OSError as e:
-            print ("Error: %s - %s." % (e.filename, e.strerror))
-            
-        return data

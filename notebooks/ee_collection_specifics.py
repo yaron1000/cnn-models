@@ -15,6 +15,19 @@ def ee_bands(collection):
     
     return dic[collection]
 
+def ee_bands_rgb(collection):
+    """
+    Earth Engine band names
+    """
+    
+    dic = {
+        'Sentinel2': ['B4','B3','B2'],
+        'Landsat7': ['B3','B2','B1'],
+        'CroplandDataLayers': ['cropland']
+    }
+    
+    return dic[collection]
+
 def ee_collections(collection):
     """
     Earth Engine image collection names
@@ -29,7 +42,7 @@ def ee_collections(collection):
 
 def normDiff_bands(collection):
     """
-    Earth Engine image collection names
+    Earth Engine normDiff bands
     """
     dic = {
         'Sentinel2': [['B8','B4'], ['B8','B3']],
@@ -39,6 +52,17 @@ def normDiff_bands(collection):
     
     return dic[collection]
 
+def normDiff_bands_names(collection):
+    """
+    Earth Engine normDiff bands
+    """
+    dic = {
+        'Sentinel2': [['ndvi'], ['ndwi']],
+        'Landsat7': [['ndvi'], ['ndwi']],
+        'CroplandDataLayers': []
+    }
+    
+    return dic[collection]
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 import ee

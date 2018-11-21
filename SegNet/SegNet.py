@@ -96,7 +96,7 @@ class segnet(object):
         outputs = Activation('softmax')(x)
         
         self.model = Model(inputs=inputs, outputs=outputs)
-        self.model.load_weights('SegNet/Network/SegNet_weights.hdf5')
+        self.model.load_weights('../SegNet/Network/SegNet_weights.hdf5')
         
 
     def predict(self):
@@ -130,7 +130,7 @@ if (__name__ == '__main__'):
     
     # Open file with observations and read them. We use h5 in our case
     f = h5py.File(root_in, 'r')
-    imgs = f.get("x_validation")  
+    imgs = f.get("data_x")  
     
     prediction = segnet(imgs, root_out, nClasses)
     prediction.define_network()

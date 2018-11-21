@@ -115,3 +115,18 @@ def write_data(output_path, name, cube):
     h5f = h5py.File(output_path, 'w')
     h5f.create_dataset(name, data=cube)  
     h5f.close()
+    
+    
+def max_pixels(x):
+    """
+    Binarize the output taking the highest pixel value
+    """
+    x_new = x*0
+    max_val = np.amax(x, axis=2)
+    size = x.shape
+    for i in range(size[-1]):
+        ima = x[:,:,i]*0
+        ima[np.where(x[:,:,i] == max_val)] = 1
+        x_new[:,:,i]= ima
+
+    return x_new
