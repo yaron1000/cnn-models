@@ -9,11 +9,11 @@ import numpy as np
 import math
 import ee_collection_specifics
 import ee
-    
+import h5py
 
 class ee_image:
     
-    def __init__(self, point, buffer, startDate, stopDate, scale, file_name, collection):
+    def __init__(self, point, buffer, startDate, stopDate, scale, file_name, dataset_name, collection):
         """
         Class used to get the datasets from Earth Engine
         Parameters
@@ -28,6 +28,8 @@ class ee_image:
             Pixel size in meters.
         file_name: string
             File name prefix.
+        file_name: string
+            h5py dataset name.
         collection: string
             Name of each collection.
 
@@ -39,6 +41,7 @@ class ee_image:
         self.stopDate = stopDate       
         self.scale = scale 
         self.file_name = file_name 
+        self.dataset_name = dataset_name
         self.collection = collection
         
         # Area of Interest
@@ -88,5 +91,33 @@ class ee_image:
             scale = self.scale,
             crs = 'EPSG:4326',
             region = self.region,
-            fileFormat= 'GeoTIFF').start()
+            fileFormat= 'GeoTIFF',
+            formatOptions= {'cloudOptimized': True}).start()
+            
+    def read_fromCloudStorage(self):
+        
+        ## File path
+        filepath = f'https://storage.googleapis.com/{self.bucket}/{self.path}{self.file_name}'+'.tif'
+
+        ## Read image with rasterio
+        with rasterio.open(filepath) as image:
+    
+            nBands = image.count
+            szy = image.height
+            szx = image.width
+            
+            ## Save image with h5py in chunks
+            with h5py.File(self.dataset_name+'.hdf5', 'w') as f:
+                data = f.create_dataset(self.dataset_name, (szy,szx,nBands), chunks=True, dtype=np.float32)
+            
+                for n in range(nBands):
+                    data[:,:,n] = image.read(n+1)
+                    
+    def remove_file(self):
+        
+        os.remove(self.dataset_name+'.hdf5')
+        
+        
+           
+            
             
