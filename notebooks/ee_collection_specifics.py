@@ -145,3 +145,4 @@ def Composite(collection):
     }
     
     return dic[collection]
+

@@ -4,6 +4,13 @@ import pandas as pd
 import math
 import h5py
 
+
+def normalize_data(data):
+    mx = data.max()
+    mn = data.min()
+    
+    return (data-mn)/(mx-mn)
+
 def replace_values(array, class_labels, new_label):
     array_new = np.copy(array)
     for i in range(len(class_labels)):
@@ -14,7 +21,7 @@ def replace_values(array, class_labels, new_label):
 def categorical_data(data):
     # Area of Interest (AoI)
     point = [-120.7224, 37.3872]
-    geom = ee.Geometry.Point(point).buffer(1000)
+    geom = ee.Geometry.Point(point).buffer(100)
     # Start and stop of time series
     startDate = ee.Date('2016')
     stopDate  = ee.Date('2017')
@@ -54,50 +61,6 @@ def categorical_data(data):
     
     return new_data
 
-def normalize_data(data):
-    size = data.shape
-    for i in range(size[-1]):
-        mx = data[:,:,:,i].max()
-        mn = data[:,:,:,i].min()
-        
-        data[:,:,:,i] = (data[:,:,:,i]-mn)/(mx-mn)
-    return data
-
-def subfield(cube, xr, yr):
-    #Subfield selection
-    cube_sub = cube[:,yr[0]:yr[1],xr[0]:xr[1],:]
-    return cube_sub
-
-def resize_patches(data_x, data_y, patch_size):
-    sxt, sxy, sxx, sxz = data_x.shape
-    syt, syy, syx, syz = data_y.shape
-    
-    num_pathces_per_frame = math.floor(sxy/patch_size)*math.floor(sxx/patch_size)
-    
-    x = np.zeros((int(sxt*num_pathces_per_frame),patch_size,patch_size,int(sxz)), dtype=np.float32)
-    y = np.zeros((int(sxt*num_pathces_per_frame),patch_size,patch_size,int(syz)), dtype=np.float32)
-
-    n=0
-    for i in np.arange(math.floor(sxy/patch_size)):
-        for j in np.arange(math.floor(sxx/patch_size)):
-
-            yr=[int(patch_size*i),int(patch_size+patch_size*i)]
-            xr=[int(patch_size*j),int(patch_size+patch_size*j)]
-            
-            x[(sxt*n):(sxt+sxt*n),:,:,:] = subfield(data_x,xr,yr)
-            y[(sxt*n):(sxt+sxt*n),:,:,:] = subfield(data_y,xr,yr)
-
-            n=n+1
-    return x, y
-
-def randomize_datasets(data_x, data_y):
-    t=data_x.shape[0]
-    arr_t = np.arange(t)
-    np.random.shuffle(arr_t)
-    data_x = data_x[arr_t,:]
-    data_y = data_y[arr_t,:]
-    
-    return data_x, data_y
 
 def train_validation_split(x, y, val_size=20):
     t=x.shape[0]
