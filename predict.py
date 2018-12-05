@@ -6,7 +6,7 @@ import json
 import time
 import argparse
 import numpy as np
-from models import SegNet
+from models import SegNet, DeepVel
        
 class predict(object):
     
@@ -32,7 +32,7 @@ class predict(object):
         
         self.batch_size = 1
         
-        self.models = {'segnet': SegNet.segnet}
+        self.models = {'segnet': SegNet.segnet, 'deepvel': DeepVel.deepvel}
         
         self.input = self.root_in + "data_x.hdf5"
         
@@ -74,7 +74,7 @@ class predict(object):
         
 
     def predict(self):
-        print("Segmenting images with ...")        
+        print("Predicting with "+self.model_name+"...")        
         
         start = time.time()
         with h5py.File(self.output, 'w') as f:

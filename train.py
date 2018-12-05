@@ -5,7 +5,7 @@ import h5py
 import json
 import argparse
 import numpy as np
-from models import SegNet
+from models import SegNet, DeepVel
 
 class LossHistory(Callback):
     def __init__(self, root_out, losses):
@@ -47,7 +47,7 @@ class train(object):
         
         self.batch_size = 32
         
-        self.models = {'segnet': SegNet.segnet}
+        self.models = {'segnet': SegNet.segnet, 'deepvel': DeepVel.deepvel}
         
         self.input_x_train = self.root_in + "x_train.hdf5"
         self.input_y_train = self.root_in + "y_train.hdf5"
@@ -156,7 +156,7 @@ class train(object):
         self.model.compile(loss='mse', optimizer=Adam(lr=1e-4))
 
     def train_network(self, nEpochs):
-        print("Training network...")        
+        print("Training "+self.model_name+"...")        
         
         # Recover losses from previous run or set and empty one
         if (self.option == 'continue'):

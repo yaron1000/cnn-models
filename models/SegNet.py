@@ -80,4 +80,4 @@ if __name__ == '__main__':
     model = segnet((128,128,6), 4)
     model.summary()
     from keras.utils import plot_model
-    plot_model( model , show_shapes=True , to_file='SegNet.png')
+    plot_model(model , show_shapes=True , to_file='SegNet.png')
