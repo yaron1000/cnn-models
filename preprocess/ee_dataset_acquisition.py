@@ -174,7 +174,7 @@ class ee_dataset:
 
                             nc+=1
                     
-            ## Remove inpyt file
+            ## Remove input file
             os.remove(self.root_out+self.dataset_name+'_'+self.nFormat.format(n)+'.hdf5')
         
         
@@ -194,7 +194,7 @@ class ee_dataset:
                 
         ## Save image with h5py 
         with h5py.File(self.root_out+self.dataset_name+'.hdf5', 'w') as f:
-            data_new = f.create_dataset(self.dataset_name, (nFrames,cy,cx,nBands), chunks=True, dtype=self.h5py_dtype)
+            data_new = f.create_dataset(self.dataset_name, (nFrames,cy,cx,nBands), dtype=self.h5py_dtype)
             
             nFrames = 0
             for n in range(self.nPoints):

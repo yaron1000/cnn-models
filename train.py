@@ -5,7 +5,6 @@ import h5py
 import json
 import argparse
 import numpy as np
-from preprocess.preprocess_datasets import categorical_data
 from models import SegNet
 
 class LossHistory(Callback):
@@ -103,9 +102,6 @@ class train(object):
                 for n in range(len(self.min_v)):
                     input_train[:,:,:,n] = (input_train[:,:,:,n]-self.min_v[n])/(self.max_v[n]-self.min_v[n])
                 
-                # Change class labels
-                output_train = categorical_data(output_train)
-                
                 yield input_train, output_train
 
         f_x.close()
@@ -127,9 +123,6 @@ class train(object):
                 # Normalize input
                 for n in range(len(self.min_v)):
                     input_validation[:,:,:,n] = (input_validation[:,:,:,n]-self.min_v)/(self.max_v-self.min_v)
-                    
-                # Change class labels
-                output_validation = categorical_data(output_validation)
 
                 yield input_validation, output_validation
 

@@ -4,6 +4,8 @@ Information on Earth Engine collections stored here (e.g. bands, collection ids,
 
 import ee
 import numpy as np
+import pandas as pd
+from keras.utils import np_utils
 
 def ee_bands(collection):
     """
@@ -192,6 +194,79 @@ def h5py_dtype(collection):
         'Sentinel2': np.uint8,
         'Landsat7': np.uint8,
         'CroplandDataLayers': np.uint8
+    }
+    
+    return dic[collection]
+
+
+## ------------------------ Change class labels ------------------------ ##
+
+def replace_values(array, class_labels, new_label):
+    array_new = np.copy(array)
+    for i in range(len(class_labels)):
+        array_new[np.where(array == class_labels[i])] = new_label
+        
+    return array_new
+
+def cropland_classes(data):
+    # Area of Interest (AoI)
+    point = [-120.7224, 37.3872]
+    geom = ee.Geometry.Point(point).buffer(100)
+    # Start and stop of time series
+    startDate = ee.Date('2016')
+    stopDate  = ee.Date('2017')
+    # Read the ImageCollection
+    dataset = ee.ImageCollection('USDA/NASS/CDL')\
+        .filterBounds(geom)\
+        .filterDate(startDate,stopDate)
+    # Get the cropland class values and names
+    cropland_info = pd.DataFrame({'cropland_class_values':dataset.getInfo().get('features')[0].get('properties').get('cropland_class_values'),
+                              'cropland_class_palette':dataset.getInfo().get('features')[0].get('properties').get('cropland_class_palette'),
+                              'cropland_class_names':dataset.getInfo().get('features')[0].get('properties').get('cropland_class_names')
+                             })
+    
+
+    # New classes
+    land = ['Shrubland', 'Barren', 'Grassland/Pasture', 'Deciduous Forest', 'Evergreen Forest', 'Mixed Forest', 'Wetlands', 'Woody Wetlands', 'Herbaceous Wetlands']
+    water = ['Water', 'Open Water', 'Aquaculture']
+    urban = ['Developed', 'Developed/Open Space', 'Developed/High Intensity', 'Developed/Low Intensity', 'Developed/Med Intensity']
+
+    class_labels_0 = np.array(cropland_info[cropland_info['cropland_class_names'].isin(land)]['cropland_class_values'])
+    class_labels_1 = np.array(cropland_info[cropland_info['cropland_class_names'].isin(water)]['cropland_class_values'])
+    class_labels_2 = np.array(cropland_info[cropland_info['cropland_class_names'].isin(urban)]['cropland_class_values'])
+    class_labels_3 = np.array(cropland_info[(~cropland_info['cropland_class_names'].isin(land)) & 
+                                        (~cropland_info['cropland_class_names'].isin(water)) & 
+                                        (~cropland_info['cropland_class_names'].isin(urban))]['cropland_class_values'])
+
+    # We replace the class labels
+    new_data = np.copy(data[:])
+    new_data = replace_values(new_data, class_labels_3, 3)
+    new_data = replace_values(new_data, class_labels_2, 2)
+    new_data = replace_values(new_data, class_labels_1, 1)
+    new_data = replace_values(new_data, class_labels_0, 0)
+
+    # Convert 1-dimensional class arrays to 4-dimensional class matrices
+    new_data = np_utils.to_categorical(new_data, 4)
+    
+    return new_data
+
+
+## ------------------------------------------------------------------- ##
+
+def change_class_labels(collection):
+    dic = {
+        'Sentinel2': [],
+        'Landsat7': [],
+        'CroplandDataLayers': cropland_classes
+    }
+    
+    return dic[collection]
+
+def nClasses(collection):
+    dic = {
+        'Sentinel2': [],
+        'Landsat7': [],
+        'CroplandDataLayers': 4
     }
     
     return dic[collection]

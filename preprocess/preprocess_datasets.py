@@ -3,57 +3,8 @@ import numpy as np
 import pandas as pd
 import math
 import h5py
+import os
 from preprocess import ee_collection_specifics
-from keras.utils import np_utils
-
-def replace_values(array, class_labels, new_label):
-    array_new = np.copy(array)
-    for i in range(len(class_labels)):
-        array_new[np.where(array == class_labels[i])] = new_label
-        
-    return array_new
-
-def categorical_data(data):
-    # Area of Interest (AoI)
-    point = [-120.7224, 37.3872]
-    geom = ee.Geometry.Point(point).buffer(100)
-    # Start and stop of time series
-    startDate = ee.Date('2016')
-    stopDate  = ee.Date('2017')
-    # Read the ImageCollection
-    dataset = ee.ImageCollection('USDA/NASS/CDL')\
-        .filterBounds(geom)\
-        .filterDate(startDate,stopDate)
-    # Get the cropland class values and names
-    cropland_info = pd.DataFrame({'cropland_class_values':dataset.getInfo().get('features')[0].get('properties').get('cropland_class_values'),
-                              'cropland_class_palette':dataset.getInfo().get('features')[0].get('properties').get('cropland_class_palette'),
-                              'cropland_class_names':dataset.getInfo().get('features')[0].get('properties').get('cropland_class_names')
-                             })
-    
-
-    # New classes
-    land = ['Shrubland', 'Barren', 'Grassland/Pasture', 'Deciduous Forest', 'Evergreen Forest', 'Mixed Forest', 'Wetlands', 'Woody Wetlands', 'Herbaceous Wetlands']
-    water = ['Water', 'Open Water', 'Aquaculture']
-    urban = ['Developed', 'Developed/Open Space', 'Developed/High Intensity', 'Developed/Low Intensity', 'Developed/Med Intensity']
-
-    class_labels_0 = np.array(cropland_info[cropland_info['cropland_class_names'].isin(land)]['cropland_class_values'])
-    class_labels_1 = np.array(cropland_info[cropland_info['cropland_class_names'].isin(water)]['cropland_class_values'])
-    class_labels_2 = np.array(cropland_info[cropland_info['cropland_class_names'].isin(urban)]['cropland_class_values'])
-    class_labels_3 = np.array(cropland_info[(~cropland_info['cropland_class_names'].isin(land)) & 
-                                        (~cropland_info['cropland_class_names'].isin(water)) & 
-                                        (~cropland_info['cropland_class_names'].isin(urban))]['cropland_class_values'])
-
-    # We replace the class labels
-    new_data = np.copy(data[:,:,:,0])
-    new_data = replace_values(new_data, class_labels_3, 3.)
-    new_data = replace_values(new_data, class_labels_2, 2.)
-    new_data = replace_values(new_data, class_labels_1, 1.)
-    new_data = replace_values(new_data, class_labels_0, 0.)
-
-    # Convert 1-dimensional class arrays to 4-dimensional class matrices
-    new_data = np_utils.to_categorical(new_data, 4)
-    
-    return new_data
 
 class preprocess_datasets:
     
@@ -76,6 +27,12 @@ class preprocess_datasets:
         self.h5py_dtype_x = ee_collection_specifics.h5py_dtype(self.collections[0])
         self.h5py_dtype_y = ee_collection_specifics.h5py_dtype(self.collections[1])
         
+        # Function to change the class labels 
+        self.class_labels = ee_collection_specifics.change_class_labels(self.collections[1])
+ 
+        # Number of classes
+        self.nClasses = ee_collection_specifics.nClasses(self.collections[1])
+        
         # Path of the files.
         self.path = './samples/'
 
@@ -96,6 +53,29 @@ class preprocess_datasets:
     
             ## Save max min values 
             np.savez(self.path+'normalization_values', min_v, max_v)
+            
+    def change_class_labels(self):
+        if self.nClasses:
+            f = h5py.File(self.path+self.dataset_names[1]+'.hdf5', 'r')
+            data_y = f[self.dataset_names[1]]
+        
+            dim = list(data_y.shape)
+            dim[-1] = self.nClasses
+    
+            with h5py.File(self.path+self.dataset_names[1]+'_classes'+'.hdf5', 'w') as f:
+                data = f.create_dataset(self.dataset_names[1], dim, dtype=self.h5py_dtype_y)
+                
+                n = 10000
+                for i in range(math.ceil(dim[0]/n)):
+                    data[i*n:(i+1)*n,:,:,:] = ee_collection_specifics.change_class_labels(self.collections[1])(data_y[i*n:(i+1)*n,:,:,:])
+            
+            f.close()
+        
+        ## Remove input file
+        os.remove(self.path+self.dataset_names[1]+'.hdf5')
+        
+        ## Rename output file
+        os.rename(self.path+self.dataset_names[1]+'_classes'+'.hdf5',self.path+self.dataset_names[1]+'.hdf5')
     
     def randomize_datasets(self):
         
@@ -116,7 +96,7 @@ class preprocess_datasets:
         fy.close()
 
 
-    def train_validation_split(self, val_size):
+    def train_validation_split(self, val_size=20):
         fx = h5py.File(self.path+self.dataset_names[0]+'.hdf5', 'r')
         data_x = fx[self.dataset_names[0]]
         
