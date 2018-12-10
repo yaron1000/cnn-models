@@ -45,7 +45,7 @@ class train(object):
         self.option = option
         self.model_name = model_name
         
-        self.batch_size = 32
+        self.batch_size = 16
         
         self.models = {'segnet': SegNet.segnet, 'deepvel': DeepVel.deepvel}
         
@@ -106,12 +106,12 @@ class train(object):
 
         f_x.close()
         f_y.close()
-
+        
     def validation_generator(self):
-        f_x = h5py.File(self.input_x_train, 'r')
+        f_x = h5py.File(self.input_x_validation, 'r')
         x = f_x.get("x_validation")
 
-        f_y = h5py.File(self.input_y_train, 'r')
+        f_y = h5py.File(self.input_y_validation, 'r')
         y = f_y.get("y_validation")
         
         while True:        
@@ -122,7 +122,7 @@ class train(object):
                 
                 # Normalize input
                 for n in range(len(self.min_v)):
-                    input_validation[:,:,:,n] = (input_validation[:,:,:,n]-self.min_v)/(self.max_v-self.min_v)
+                    input_validation[:,:,:,n] = (input_validation[:,:,:,n]-self.min_v[n])/(self.max_v[n]-self.min_v[n])
 
                 yield input_validation, output_validation
 
