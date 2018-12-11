@@ -51,7 +51,7 @@ def deepvel(inputShape, nClasses):
     return model
 
 if __name__ == '__main__':
-    model = deepvel((128,128,6), 4)
+    model = deepvel((500,500,6), 4)
     model.summary()
     from keras.utils import plot_model
     plot_model(model, show_shapes=True , to_file='DeepVel.png')
