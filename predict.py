@@ -77,21 +77,16 @@ class predict(object):
         print("Predicting with "+self.model_name+"...")        
         
         start = time.time()
-        with h5py.File(self.output, 'w') as f:
-            output = f.create_dataset('output', (self.n_frames, self.ny, self.nx, self.nClasses), chunks=True, dtype=np.float32)
-            
-            output[:] = self.model.predict_generator(self.prediction_generator(), steps=self.n_frames, max_queue_size=1)
+
+        output = self.model.predict_generator(self.prediction_generator(), steps=self.n_frames, max_queue_size=1)
+
         end = time.time()
         print("Prediction took {0:3.2} seconds...".format(end-start))
         
         print("Saving data...")
         f = h5py.File(self.output, 'w')
         f.create_dataset('output', data=output)     
-        f.close()
-        
-        return out
-
-        
+        f.close()   
 
 if (__name__ == '__main__'):
 

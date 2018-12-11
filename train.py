@@ -1,4 +1,5 @@
 from keras.models import model_from_json
+from keras.models import load_model
 from keras.optimizers import Adam 
 from keras.callbacks import Callback, ModelCheckpoint
 import h5py
@@ -87,10 +88,10 @@ class train(object):
         
     def training_generator(self):
         f_x = h5py.File(self.input_x_train, 'r')
-        x = f_x.get("x_train")
+        x = f_x.get(list(f_x.keys())[0])
 
         f_y = h5py.File(self.input_y_train, 'r')
-        y = f_y.get("y_train")
+        y = f_y.get(list(f_y.keys())[0])
 
         while True:        
             for i in range(self.batchs_per_epoch_training):
@@ -109,10 +110,10 @@ class train(object):
         
     def validation_generator(self):
         f_x = h5py.File(self.input_x_validation, 'r')
-        x = f_x.get("x_validation")
+        x = f_x.get(list(f_x.keys())[0])
 
         f_y = h5py.File(self.input_y_validation, 'r')
-        y = f_y.get("y_validation")
+        y = f_y.get(list(f_y.keys())[0])
         
         while True:        
             for i in range(self.batchs_per_epoch_validation):
@@ -145,12 +146,7 @@ class train(object):
     def read_network(self):
         print("Reading previous network...")
                 
-        f = open('{0}_model.json'.format(self.root_out), 'r')
-        json_string = f.read()
-        f.close()
-
-        self.model = model_from_json(json_string)
-        self.model.load_weights("{0}_weights.hdf5".format(self.root_out+self.model_name))
+        self.model = load_model("{0}_weights.hdf5".format(self.root_out+self.model_name))
         
     def compile_network(self):        
         self.model.compile(loss='mse', optimizer=Adam(lr=1e-4))
@@ -203,8 +199,9 @@ if (__name__ == '__main__'):
         
     if (option == 'continue'):
         out.read_network()
+        out.train_network(nEpochs)
 
-    if (option == 'start' or option == 'continue'):
+    if (option == 'start'):
         out.compile_network()
         out.train_network(nEpochs)
 
