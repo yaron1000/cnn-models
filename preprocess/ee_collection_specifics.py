@@ -69,6 +69,24 @@ def normDiff_band_names(collection):
     
     return dic[collection]
 
+def vizz_params(collection):
+    """
+    Visualization parameters
+    """
+    dic = {
+        'Sentinel2': [{'min':0,'max':150, 'bands':['B4','B3','B2']}, 
+                      {'min':0,'max':150, 'bands':['B8']},
+                      {'min':0,'max':200, 'bands':['ndvi']},
+                      {'min':0,'max':200, 'bands':['ndwi']}],
+        'Landsat7': [{'min':0,'max':150, 'bands':['B3','B2','B1']}, 
+                      {'min':0,'max':200, 'bands':['B4']},
+                      {'min':0,'max':200, 'bands':['ndvi']},
+                      {'min':0,'max':200, 'bands':['ndwi']}],
+        'CroplandDataLayers': [{'min':0,'max':255, 'bands':['cropland']}]
+    }
+    
+    return dic[collection]
+
 ## ------------------------- Filter datasets ------------------------- ##
 ## Lansat 7 Cloud Free Composite
 def CloudMaskL7(image):
@@ -177,13 +195,37 @@ def DataTypeS2(image):
 
     return image
 
+def DataTypeL7(image):
 
+    ## Change RGB data type to unsigned int8.
+    RGB = image.expression('(RGB/20)', {'RGB': image.select(['B3', 'B2', 'B1'])})
+
+    RGB = RGB.byte()
+
+    ## Change NIR data type to unsigned int16.
+    NIR = image.expression('(NIR/20)', {'NIR': image.select(['B4'])})
+
+    NIR = NIR.byte().rename('B4')
+
+    ## Change NDVI and NDWI data types to unsigned int8.
+    NDVI = image.expression('(300 * NDVI)', {'NDVI': image.select(['ndvi'])});
+      
+    NDVI = NDVI.byte().rename('ndvi')
+    
+    NDWI = image.expression('(300 * NDWI)', {'NDWI': image.select(['ndwi'])});
+
+    NDWI = NDWI.byte().rename('ndwi')
+    
+    ## Concatenate Bands with new data types
+    image = ee.Image.cat([RGB, NIR, NDVI, NDWI])
+
+    return image
 ## ------------------------------------------------------------------- ##
 
 def Dtype(collection):
     dic = {
         'Sentinel2': DataTypeS2,
-        'Landsat7': [],
+        'Landsat7': DataTypeL7,
         'CroplandDataLayers': []
     }
     
