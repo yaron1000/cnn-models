@@ -1,3 +1,10 @@
+"""SegNet model.
+
+SegNet: A Deep Convolutional Encoder-Decoder Architecture for Image Segmentation
+https://arxiv.org/pdf/1511.00561.pdf
+
+"""
+
 from keras.models import Model
 from keras.layers import Input
 from keras.layers.core import Layer, Activation, Reshape, Permute
@@ -64,7 +71,7 @@ def segnet(inputShape, nClasses):
     
     outputs = Activation('softmax')(x)
         
-    model = Model(inputs=inputs, outputs=outputs)
+    model = Model(inputs=inputs, outputs=outputs, name='segnet')
         
     return model
 
@@ -72,4 +79,4 @@ if __name__ == '__main__':
     model = segnet((496,496,6), 4)
     model.summary()
     from keras.utils import plot_model
-    plot_model(model , show_shapes=True , to_file='SegNet.png')
+    plot_model(model, show_shapes=True, to_file='SegNet.png')
