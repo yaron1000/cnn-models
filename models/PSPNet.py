@@ -6,6 +6,7 @@ https://arxiv.org/pdf/1612.01105.pdf
 Adapted from code contributed by ykamikawa.
 https://github.com/ykamikawa/PSPNet
 """
+
 import keras.backend as K
 from keras.models import Model
 from keras.engine import InputSpec
@@ -18,7 +19,7 @@ from keras.layers import merge, multiply, Add, concatenate, BatchNormalization
 
 
 # squeeze and excitation function
-def _squeeze_excite_block(input, filters, k=1, name=None):
+def squeeze_excite_block(input, filters, k=1, name=None):
     init = input
     if K.image_data_format() == 'channels_last':
         se_shape = (1, 1, filters * k)
@@ -77,7 +78,7 @@ def identity_block(input_tensor, kernel_size, filters, stage, block, dilation_ra
 
     # stage 5 after squeeze and excinttation layer
     if use_se and stage < 5:
-        se = _squeeze_excite_block(x, filters3, k=1, name=conv_name_base+'_se')
+        se = squeeze_excite_block(x, filters3, k=1, name=conv_name_base+'_se')
         x = multiply([x, se])
         
     x = Add()([x, input_tensor])
@@ -113,7 +114,7 @@ def conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2),
     conv_name_base = 'res' + str(stage) + block + '_branch'
     bn_name_base = 'bn' + str(stage) + block + '_branch'
 
-    # dailated rate
+    # dilated rate
     if dilation_rate > 1:
         strides = (1, 1)
     else:
@@ -136,7 +137,7 @@ def conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2),
 
     # stage after 5 squeeze and excittation
     if use_se and stage < 5:
-        se = _squeeze_excite_block(x, filters3, k=1, name=conv_name_base+'_se')
+        se = squeeze_excite_block(x, filters3, k=1, name=conv_name_base+'_se')
         x = multiply([x, se])
     x = Add()([x, shortcut])
     x = Activation('relu')(x)
@@ -144,7 +145,7 @@ def conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2),
     return x
 
 
-def ResNet(input_tensor, nLayers=101, output_stride=16, multigrid=[1, 1, 1], use_se=True):
+def ResNet(input_tensor, nLayers=101, output_stride=8, multigrid=[1, 1, 1], use_se=True):
     """
     ResNet model
     ----------
@@ -207,7 +208,7 @@ def ResNet(input_tensor, nLayers=101, output_stride=16, multigrid=[1, 1, 1], use
     return x
 
 
-def _conv(**conv_params):
+def conv(**conv_params):
     # conv params
     filters = conv_params["filters"]
     kernel_size = conv_params["kernel_size"]
@@ -250,10 +251,8 @@ def interp_block(x, num_filters=512, level=1, input_shape=(512, 512, 3), output_
     kernel = (level*scale, level*scale)
     strides = (level*scale, level*scale)
     global_feat = AveragePooling2D(kernel, strides=strides, name='pool_level_%s_%s' % (level, output_stride))(x)
-    global_feat = _conv(filters=num_filters, kernel_size=(1, 1), padding='same', 
-                        name='conv_level_%s_%s' % (level, output_stride))(global_feat)
-    global_feat = BatchNormalization(axis=bn_axis,
-            name='bn_level_%s_%s' % (level, output_stride))(global_feat)
+    global_feat = conv(filters=num_filters, kernel_size=(1, 1), padding='same', name='conv_level_%s_%s' % (level, output_stride))(global_feat)
+    global_feat = BatchNormalization(axis=bn_axis, name='bn_level_%s_%s' % (level, output_stride))(global_feat)
     global_feat = Lambda(Interp, arguments={'shape': feature_map_shape})(global_feat)
 
     return global_feat
@@ -274,14 +273,13 @@ def pyramid_pooling_module(x, num_filters, input_shape, output_stride, levels):
                          output_stride=output_stride))
 
     y = concatenate(pyramid_pooling_blocks)
-    # y = merge(pyramid_pooling_blocks, mode='concat', concat_axis=3)
-    y = _conv(filters=num_filters, kernel_size=(3, 3), padding='same', block='pyramid_out_%s' % output_stride)(y)
+    y = conv(filters=num_filters, kernel_size=(3, 3), padding='same', block='pyramid_out_%s' % output_stride)(y)
     y = BatchNormalization(axis=bn_axis, name='bn_pyramid_out_%s' % output_stride)(y)
     y = Activation('relu')(y)
 
     return y
 
-def pspnet(inputShape, nClasses, nLayers=101, output_stride=16, levels=[6, 3, 2, 1], upsample_type='deconv'):
+def pspnet(inputShape, nClasses, nLayers=101, output_stride=16, levels=[6, 3, 2, 1]):
     """
     PSPNet model
     ----------

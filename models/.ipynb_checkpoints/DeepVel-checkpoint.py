@@ -1,3 +1,11 @@
+"""DeepVel model.
+
+DeepVel: Deep learning for the estimation of horizontal
+velocities at the solar surface
+https://www.aanda.org/articles/aa/pdf/2017/08/aa30783-17.pdf
+
+"""
+
 from keras.models import Model
 from keras.layers import Input, Add
 from keras.layers.core import Layer, Activation, Reshape
@@ -46,7 +54,7 @@ def deepvel(inputShape, nClasses):
 
     outputs = Activation('softmax')(x)
 
-    model = Model(inputs=inputs, outputs=outputs)
+    model = Model(inputs=inputs, outputs=outputs, name='deepvel')
         
     return model
 

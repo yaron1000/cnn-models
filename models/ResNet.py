@@ -179,7 +179,7 @@ def resnet(inputShape, nClasses, nLayers=101):
 
 
 if __name__ == '__main__':
-    model = resnet((224,224,3), 4, nLayers=50)
+    model = resnet((512,512,3), 4, nLayers=50)
     model.summary()
     from keras.utils import plot_model
     plot_model(model, show_shapes=True, to_file='ResNet.png')

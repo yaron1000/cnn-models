@@ -6,7 +6,7 @@ import json
 import time
 import argparse
 import numpy as np
-from models import SegNet, DeepVel
+from models import SegNet, DeepVel, PSPNet, DeepLabv3plus
        
 class predict(object):
     
@@ -32,7 +32,8 @@ class predict(object):
         
         self.batch_size = 1
         
-        self.models = {'segnet': SegNet.segnet, 'deepvel': DeepVel.deepvel}
+        self.models = {'segnet': SegNet.segnet, 'deepvel': DeepVel.deepvel, 
+                       'pspnet': PSPNet.pspnet, 'deeplabv3plus': DeepLabv3plus.deeplabv3plus}
         
         self.input = self.root_in + "data_x.hdf5"
         
