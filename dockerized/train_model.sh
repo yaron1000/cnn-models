@@ -15,7 +15,7 @@ case "$1" in
 	;;
     *)
 	
-	echo "Usage: train_model.sh {generate_data|preprocess}" >&2
+	echo "Usage: train_model.sh {generate_data|preprocess|train|ingest}" >&2
 	exit 1
 	;;
 esac
