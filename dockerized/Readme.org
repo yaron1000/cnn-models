@@ -1,9 +1,10 @@
 * Skydipper Model Training PoC
 ** Description
-   Skydipper is a Vizzuality project, cofinanced by the Ministry of
-   Energy, Tourism and Digital Agenda as part of the National
-   Scientific Research, Development, and Technical Innovation Plan
-   2013-1016 with expedient number TSI-100504-2017-1.
+   [[http://www.skydipper.com][Skydipper]] is a Simbiótica S.L. (D.B.A. Vizzuality) project,
+   cofinanced by the Ministry of Energy, Tourism and Digital Agenda as
+   part of the National Scientific Research, Development, and
+   Technical Innovation Plan 2013-1016 with expedient number
+   TSI-100504-2017-1.
 
    The aim of the project is the development of an open source
    platform for the detection of environmental risks through the
@@ -36,11 +37,10 @@
    pipeline. Usage is as follows, given a properly configured
    environment:
 
-   ```
-   ▶ ./train_model.sh
-
-   Usage: train_model.sh {generate_data|preprocess|train|ingest}
-   ```
+#+BEGIN_SRC
+▶ ./train_model.sh
+Usage: train_model.sh {generate_data|preprocess|train|ingest}
+#+END_SRC
 
    The four steps (generate_data, preprocess, train, and ingest) are
    meant to be ran in order, as they'll produce artifacts in the
@@ -102,3 +102,5 @@
 ** TODO Computational notebooks implementation
    An example of this workflow is provided in a [jupyter notebook] for
    convenience.
+
+ (c) Vizzuality- Simbiotica S.L. 2017-2019
