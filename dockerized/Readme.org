@@ -84,17 +84,17 @@ Usage: train_model.sh {generate_data|preprocess|train|ingest}
     ~$GOOGLE_APPLICATION_CREDENTIALS~ pointing to a valid service account.
 *** Running the process
     Running the process in order will give out the following results:
-    - ~ ./train_model.sh generate_data~  will set up a series of areas of
+    - ~./train_model.sh generate_data~  will set up a series of areas of
       interest and instruct Google Earth Engine to upload this data to
       a bucket in tiff format.
-    - ~ ./train_model.sh preprocess~  will download this data, merge it
+    - ~./train_model.sh preprocess~  will download this data, merge it
       and transform it so it's in a format suitable for tensorflow to
       compile a model, in addition to other tasks (e.g. the train-test
       split).
-    - ~ ./train_model.sh train~  will take the preprocessed data and
+    - ~./train_model.sh train~  will take the preprocessed data and
       train a neural network on it. It will output the serialized
-      models to the 'networks' directory.
-    - './train_model.sh ingest' will take the generated neural network
+      models to the ~networks~ directory.
+    - ~./train_model.sh ingest~ will take the generated neural network
       model and run it on the testing set.
 *** Evaluating the model
 ** TODO Model architecture
