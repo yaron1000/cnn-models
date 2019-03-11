@@ -21,4 +21,13 @@ services:
       - ./samples:/scripts/samples
       - ./networks:/scripts/networks
       - ./models:/scripts/models
+  predict:
+    build:
+      context: ./src/
+      dockerfile: Dockerfile.predict
+    volumes:
+      - ./samples:/scripts/samples
+      - ./models:/scripts/models
+      - ./outputs:/scripts/outputs
+
       
